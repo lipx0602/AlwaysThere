@@ -5,7 +5,7 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+const tintColorLight = '#F97316';
 const tintColorDark = '#fff';
 
 export const Colors = {
@@ -27,6 +27,19 @@ export const Colors = {
   },
 };
 
+export const Brand = {
+  primary: '#F97316',
+  primaryLight: '#FED7AA',
+  primaryDark: '#EA580C',
+  surface: '#FFFFFF',
+  surfaceAlt: '#F9FAFB',
+  text: '#111827',
+  textMuted: '#6B7280',
+  border: '#E5E7EB',
+  success: '#22C55E',
+  error: '#EF4444',
+};
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
@@ -37,17 +50,21 @@ export const Fonts = Platform.select({
     rounded: 'ui-rounded',
     /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
+    /** Display font */
+    display: 'Georgia',
   },
   default: {
     sans: 'normal',
     serif: 'serif',
     rounded: 'normal',
     mono: 'monospace',
+    display: 'Georgia',
   },
   web: {
     sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    display: "Georgia, 'Times New Roman', serif",
   },
 });

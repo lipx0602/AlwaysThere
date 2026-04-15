@@ -1,98 +1,336 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import {
+  Dimensions,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Brand } from '@/constants/theme';
+import { DUMMY_ALERTS, VITALS_LAST_7_DAYS } from '@/constants/vitals';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CHART_OUTER_WIDTH = SCREEN_WIDTH - 32; // card horizontal padding
+const CHART_INNER_WIDTH = CHART_OUTER_WIDTH - 32; // inner card padding
+const CHART_HEIGHT = 200;
+
+// Normal band (60–100 bpm) pixel offsets
+// Y axis: min=40, max=120 → range=80
+// Plot area height ≈ CHART_HEIGHT - 64 (top + bottom padding in chart-kit)
+const Y_MIN = 40;
+const Y_MAX = 120;
+const Y_RANGE = Y_MAX - Y_MIN;
+const PLOT_HEIGHT = CHART_HEIGHT - 64;
+const CHART_TOP_PADDING = 36;
+const CHART_LEFT_OFFSET = 58; // y-axis label area width
+
+const BAND_TOP = CHART_TOP_PADDING + ((Y_MAX - 100) / Y_RANGE) * PLOT_HEIGHT;
+const BAND_HEIGHT = ((100 - 60) / Y_RANGE) * PLOT_HEIGHT;
+
+const chartData = {
+  labels: VITALS_LAST_7_DAYS.map(d => d.date),
+  datasets: [
+    {
+      data: VITALS_LAST_7_DAYS.map(d => d.heartRate),
+      strokeWidth: 2,
+    },
+  ],
+};
+
+const chartConfig = {
+  backgroundColor: Brand.surface,
+  backgroundGradientFrom: Brand.surface,
+  backgroundGradientTo: Brand.surface,
+  decimalPlaces: 0,
+  color: (opacity = 1) => `rgba(249, 115, 22, ${opacity})`,
+  labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+  style: { borderRadius: 8 },
+  propsForDots: {
+    r: '4',
+    strokeWidth: '2',
+    stroke: Brand.primary,
+  },
+  propsForBackgroundLines: {
+    stroke: Brand.border,
+    strokeDasharray: '',
+  },
+};
 
 export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView style={styles.safe}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.greeting}>Good morning 👋</Text>
+            <Text style={styles.appName}>AlwaysThere</Text>
+          </View>
+          <View style={styles.heartBadge}>
+            <Ionicons name="heart" size={22} color={Brand.primary} />
+          </View>
+        </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        {/* Alerts Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="notifications" size={18} color={Brand.primary} />
+            <Text style={styles.cardTitle}>Yesterday's Alerts</Text>
+          </View>
+          <Text style={styles.alertRecipient}>Sent to: son@gmail.com</Text>
+
+          <View style={styles.divider} />
+
+          {DUMMY_ALERTS.map((alert, i) => (
+            <View
+              key={i}
+              style={[styles.alertRow, i < DUMMY_ALERTS.length - 1 && styles.alertRowBorder]}
+            >
+              <Text style={styles.alertIcon}>{alert.icon}</Text>
+              <View style={styles.alertContent}>
+                <Text style={styles.alertMessage}>{alert.message}</Text>
+                <Text style={styles.alertTime}>{alert.time}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Heart Rate Chart Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="pulse" size={18} color={Brand.primary} />
+            <Text style={styles.cardTitle}>Heart Rate — Last 7 Days</Text>
+          </View>
+
+          <View style={styles.chartLegend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Brand.primary }]} />
+              <Text style={styles.legendText}>Heart rate (bpm)</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: 'rgba(134, 239, 172, 0.9)' }]} />
+              <Text style={styles.legendText}>Normal range (60–100)</Text>
+            </View>
+          </View>
+
+          <View style={{ position: 'relative' }}>
+            <LineChart
+              data={chartData}
+              width={CHART_INNER_WIDTH}
+              height={CHART_HEIGHT}
+              chartConfig={chartConfig}
+              bezier
+              style={styles.chart}
+              yAxisSuffix=""
+              yAxisInterval={1}
+              segments={4}
+              {...({ yAxisMinValue: Y_MIN, yAxisMaxValue: Y_MAX } as object)}
+            />
+            {/* Normal band overlay: green semi-transparent rect */}
+            <View
+              style={[
+                styles.normalBand,
+                {
+                  top: BAND_TOP,
+                  left: CHART_LEFT_OFFSET,
+                  width: CHART_INNER_WIDTH - CHART_LEFT_OFFSET - 8,
+                  height: BAND_HEIGHT,
+                },
+              ]}
+              pointerEvents="none"
+            />
+          </View>
+
+          <Text style={styles.chartCaption}>Normal resting range: 60–100 bpm</Text>
+        </View>
+
+        {/* Today's Vitals Snapshot */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="stats-chart" size={18} color={Brand.primary} />
+            <Text style={styles.cardTitle}>Today's Snapshot</Text>
+          </View>
+          <View style={styles.vitalsGrid}>
+            {[
+              { label: 'Heart Rate', value: `${VITALS_LAST_7_DAYS[6].heartRate} bpm`, icon: '❤️' },
+              { label: 'SpO₂', value: `${VITALS_LAST_7_DAYS[6].spo2}%`, icon: '💨' },
+              { label: 'Temp', value: `${VITALS_LAST_7_DAYS[6].temp}°F`, icon: '🌡️' },
+              {
+                label: 'Blood Pressure',
+                value: `${VITALS_LAST_7_DAYS[6].systolic}/${VITALS_LAST_7_DAYS[6].diastolic}`,
+                icon: '🩸',
+              },
+            ].map(v => (
+              <View key={v.label} style={styles.vitalItem}>
+                <Text style={styles.vitalIcon}>{v.icon}</Text>
+                <Text style={styles.vitalValue}>{v.value}</Text>
+                <Text style={styles.vitalLabel}>{v.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  safe: {
+    flex: 1,
+    backgroundColor: Brand.surfaceAlt,
+  },
+  scroll: {
+    flex: 1,
+  },
+  container: {
+    padding: 16,
+    gap: 16,
+    paddingBottom: 32,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  greeting: {
+    fontSize: 16,
+    color: Brand.textMuted,
+  },
+  appName: {
+    fontFamily: 'Georgia',
+    fontSize: 26,
+    fontWeight: '700',
+    color: Brand.primary,
+  },
+  heartBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Brand.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  card: {
+    backgroundColor: Brand.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Brand.border,
+    gap: 12,
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Brand.text,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  alertRecipient: {
+    fontSize: 13,
+    color: Brand.textMuted,
+    marginTop: -4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Brand.border,
+  },
+  alertRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 6,
+  },
+  alertRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Brand.border,
+  },
+  alertIcon: {
+    fontSize: 20,
+    marginTop: 1,
+  },
+  alertContent: {
+    flex: 1,
+    gap: 2,
+  },
+  alertMessage: {
+    fontSize: 14,
+    color: Brand.text,
+    fontWeight: '500',
+  },
+  alertTime: {
+    fontSize: 12,
+    color: Brand.textMuted,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    gap: 16,
+    flexWrap: 'wrap',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendText: {
+    fontSize: 12,
+    color: Brand.textMuted,
+  },
+  chart: {
+    borderRadius: 8,
+    marginLeft: -16,
+  },
+  normalBand: {
     position: 'absolute',
+    backgroundColor: 'rgba(134, 239, 172, 0.28)',
+  },
+  chartCaption: {
+    fontSize: 12,
+    color: Brand.textMuted,
+    textAlign: 'center',
+    marginTop: -4,
+  },
+  vitalsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  vitalItem: {
+    flex: 1,
+    minWidth: '40%',
+    backgroundColor: Brand.surfaceAlt,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    gap: 4,
+  },
+  vitalIcon: {
+    fontSize: 22,
+  },
+  vitalValue: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: Brand.text,
+  },
+  vitalLabel: {
+    fontSize: 12,
+    color: Brand.textMuted,
+    textAlign: 'center',
   },
 });
