@@ -1,17 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 
+import { NOTIFICATION_RULES } from '@/constants/notificationRules';
 import { Brand } from '@/constants/theme';
 import { DUMMY_ALERTS, VITALS_LAST_7_DAYS } from '@/constants/vitals';
+import { evaluateRules, scheduleRuleNotifications } from '@/services/notificationService';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_OUTER_WIDTH = SCREEN_WIDTH - 32; // card horizontal padding
@@ -60,7 +64,34 @@ const chartConfig = {
   },
 };
 
+// Demo vitals that trigger the bp_hrv_high rule
+const DEMO_HIGH_VITALS = {
+  date: 'Now',
+  heartRate: 98,
+  hrv: 52,
+  spo2: 96,
+  temp: 99.1,
+  systolic: 145,
+  diastolic: 92,
+};
+
 export default function HomeScreen() {
+  const [simulating, setSimulating] = useState(false);
+  const [simulated, setSimulated] = useState(false);
+
+  const handleSimulateAlert = async () => {
+    setSimulating(true);
+    try {
+      const matched = evaluateRules(DEMO_HIGH_VITALS, NOTIFICATION_RULES);
+      for (const rule of matched) {
+        await scheduleRuleNotifications(rule);
+      }
+      setSimulated(true);
+    } finally {
+      setSimulating(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -101,6 +132,40 @@ export default function HomeScreen() {
               </View>
             </View>
           ))}
+
+          <View style={styles.divider} />
+
+          {simulated ? (
+            <View style={styles.demoTip}>
+              <Ionicons name="information-circle" size={18} color={Brand.primary} style={styles.demoTipIcon} />
+              <View style={styles.demoTipBody}>
+                <Text style={styles.demoTipText}>
+                  <Text style={styles.demoTipBold}>This is a demo. </Text>
+                  Exit the app now to see what a patient would experience — a notification will
+                  arrive shortly, followed by a check-in 30 seconds later.
+                </Text>
+                <TouchableOpacity onPress={() => setSimulated(false)} activeOpacity={0.7}>
+                  <Text style={styles.demoTipRetry}>Simulate again</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.simulateBtn, simulating && styles.simulateBtnDisabled]}
+              onPress={handleSimulateAlert}
+              disabled={simulating}
+              activeOpacity={0.8}
+            >
+              {simulating ? (
+                <ActivityIndicator size="small" color={Brand.primary} />
+              ) : (
+                <>
+                  <Ionicons name="notifications-outline" size={15} color={Brand.primary} />
+                  <Text style={styles.simulateBtnText}>Simulate high BP alert</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Heart Rate Chart Card */}
@@ -272,6 +337,54 @@ const styles = StyleSheet.create({
   alertTime: {
     fontSize: 12,
     color: Brand.textMuted,
+  },
+  demoTip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: Brand.primaryLight,
+    borderRadius: 10,
+    padding: 12,
+  },
+  demoTipIcon: {
+    marginTop: 1,
+  },
+  demoTipBody: {
+    flex: 1,
+    gap: 6,
+  },
+  demoTipText: {
+    fontSize: 13,
+    color: Brand.primaryDark,
+    lineHeight: 19,
+  },
+  demoTipBold: {
+    fontWeight: '700',
+  },
+  demoTipRetry: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Brand.primaryDark,
+    textDecorationLine: 'underline',
+  },
+  simulateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Brand.primary,
+    borderStyle: 'dashed',
+  },
+  simulateBtnDisabled: {
+    opacity: 0.5,
+  },
+  simulateBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Brand.primary,
   },
   chartLegend: {
     flexDirection: 'row',

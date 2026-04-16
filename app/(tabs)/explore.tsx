@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { File, Paths } from 'expo-file-system/next';
 import { router } from 'expo-router';
 import React from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Brand } from '@/constants/theme';
 import { useOnboarding } from '@/context/OnboardingContext';
+import { clearProfile } from '@/services/storage';
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -45,12 +45,11 @@ export default function ProfileScreen() {
         {
           text: 'Reset',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             try {
-              const sentinel = new File(Paths.document, 'user_registered.json');
-              if (sentinel.exists) sentinel.delete();
+              await clearProfile();
             } catch (e) {
-              console.warn('Could not delete sentinel', e);
+              console.warn('Could not clear profile', e);
             }
             resetData();
             router.replace('/onboarding' as any);
