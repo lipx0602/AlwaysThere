@@ -41,3 +41,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+# local handoff / context docs
+handoff_app_start.md
+
+# Claude memory
+.claude/

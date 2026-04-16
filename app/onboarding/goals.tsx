@@ -1,7 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { File, Paths } from 'expo-file-system/next';
 import { router } from 'expo-router';
-import * as Sharing from 'expo-sharing';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,6 +15,11 @@ import { PillButton } from '@/components/PillButton';
 import { ProgressDots } from '@/components/ProgressDots';
 import { Brand } from '@/constants/theme';
 import { type Goal, useOnboarding } from '@/context/OnboardingContext';
+import { saveProfile } from '@/services/storage';
+
+function generatePairingCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 const ALL_GOALS: Goal[] = ['Diabetics', 'Speeding Heart', 'Sudden Fall', 'Social Companion'];
 
@@ -28,46 +31,21 @@ const GOAL_ICONS: Record<Goal, string> = {
 };
 
 export default function GoalsScreen() {
-  const { data, toggleGoal } = useOnboarding();
+  const { data, toggleGoal, setPairingCode } = useOnboarding();
   const [saving, setSaving] = useState(false);
 
   const handleFinish = async () => {
     setSaving(true);
     try {
-      const csvHeader = 'name,role,gender,email,phone,goals,registered_at';
-      const csvRow = [
-        `"${data.name}"`,
-        `"${data.role ?? ''}"`,
-        `"${data.gender ?? ''}"`,
-        `"${data.email}"`,
-        `"${data.displayPhone}"`,
-        `"${data.goals.join('|')}"`,
-        `"${new Date().toISOString()}"`,
-      ].join(',');
-      const csvContent = `${csvHeader}\n${csvRow}`;
-
-      const filename = `alwaysthere_profile_${Date.now()}.csv`;
-      const csvFile = new File(Paths.document, filename);
-      csvFile.write(csvContent);
-
-      const sentinel = new File(Paths.document, 'user_registered.json');
-      sentinel.write(JSON.stringify({ registeredAt: new Date().toISOString() }));
-
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(csvFile.uri, {
-          mimeType: 'text/csv',
-          dialogTitle: 'Save your AlwaysThere profile',
-          UTI: 'public.comma-separated-values-text',
-        });
-      }
+      const code = generatePairingCode();
+      setPairingCode(code);
+      await saveProfile({ ...data, pairingCode: code });
     } catch (e) {
-      console.warn('CSV export failed', e);
+      console.warn('Profile save failed', e);
     } finally {
       setSaving(false);
     }
-
-    router.replace('/(tabs)');
+    router.push('/onboarding/patient-share' as any);
   };
 
   return (

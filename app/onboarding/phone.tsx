@@ -31,10 +31,19 @@ export default function PhoneScreen() {
   const isValid = data.rawPhone.length === 10;
   const showError = touched && !isValid && data.rawPhone.length > 0;
   const canContinue = isValid;
+  const isGuardian = data.role === 'New Guardian';
+  const total = isGuardian ? 5 : 6;
+  const current = isGuardian ? 4 : 5;
+  const nextRoute = isGuardian ? '/onboarding/link' : '/onboarding/goals';
 
   const handleChange = (text: string) => {
     const digits = text.replace(/\D/g, '').slice(0, 10);
     setPhone(digits, formatPhone(digits));
+  };
+
+  const handleContinue = () => {
+    setTouched(true);
+    if (canContinue) router.push(nextRoute as any);
   };
 
   return (
@@ -43,7 +52,7 @@ export default function PhoneScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Brand.text} />
         </TouchableOpacity>
-        <ProgressDots total={6} current={5} />
+        <ProgressDots total={total} current={current} />
         <View style={styles.backBtn} />
       </View>
 
@@ -67,10 +76,7 @@ export default function PhoneScreen() {
               onBlur={() => setTouched(true)}
               keyboardType="phone-pad"
               returnKeyType="done"
-              onSubmitEditing={() => {
-                setTouched(true);
-                if (canContinue) router.push('/onboarding/goals' as any);
-              }}
+              onSubmitEditing={handleContinue}
             />
             {showError && (
               <Text style={styles.errorText}>Please enter a valid 10-digit US number</Text>
@@ -79,10 +85,7 @@ export default function PhoneScreen() {
 
           <TouchableOpacity
             style={[styles.btn, !canContinue && styles.btnDisabled]}
-            onPress={() => {
-              setTouched(true);
-              if (canContinue) router.push('/onboarding/goals' as any);
-            }}
+            onPress={handleContinue}
             activeOpacity={0.85}
           >
             <Text style={styles.btnText}>Continue</Text>

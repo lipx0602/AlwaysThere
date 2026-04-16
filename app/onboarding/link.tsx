@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -15,16 +16,23 @@ import {
 import { ProgressDots } from '@/components/ProgressDots';
 import { Brand } from '@/constants/theme';
 import { useOnboarding } from '@/context/OnboardingContext';
+import { saveProfile } from '@/services/storage';
 
-export default function NameScreen() {
-  const { data, setName } = useOnboarding();
-  const canContinue = data.name.trim().length > 0;
-  const isGuardian = data.role === 'New Guardian';
-  const total = isGuardian ? 5 : 6;
+export default function LinkScreen() {
+  const { data, setCaregiverLinkCode } = useOnboarding();
+  const [saving, setSaving] = useState(false);
+  const canContinue = data.caregiverLinkCode.trim().length > 0;
 
-  const handleContinue = () => {
-    if (!canContinue) return;
-    router.push(isGuardian ? ('/onboarding/email' as any) : ('/onboarding/gender' as any));
+  const handleFinish = async () => {
+    setSaving(true);
+    try {
+      await saveProfile(data);
+    } catch (e) {
+      console.warn('Profile save failed', e);
+    } finally {
+      setSaving(false);
+    }
+    router.replace('/(tabs)' as any);
   };
 
   return (
@@ -33,7 +41,7 @@ export default function NameScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Brand.text} />
         </TouchableOpacity>
-        <ProgressDots total={total} current={2} />
+        <ProgressDots total={5} current={5} />
         <View style={styles.backBtn} />
       </View>
 
@@ -43,34 +51,37 @@ export default function NameScreen() {
       >
         <View style={styles.container}>
           <View style={styles.top}>
-            <Text style={styles.title}>
-              {isGuardian ? "What's your name?" : "What's the patient's name?"}
-            </Text>
+            <Ionicons name="link" size={36} color={Brand.primary} />
+            <Text style={styles.title}>Connect to your patient</Text>
             <Text style={styles.subtitle}>
-              {isGuardian
-                ? 'How should we address you?'
-                : 'Enter the full name of the person being monitored'}
+              Enter the email address or 6-digit pairing code of the person you're caring for. They
+              can find their code in the app settings.
             </Text>
           </View>
 
           <TextInput
             style={styles.input}
-            placeholder="Full name"
+            placeholder="Email or pairing code"
             placeholderTextColor={Brand.textMuted}
-            value={data.name}
-            onChangeText={setName}
-            autoCapitalize="words"
+            value={data.caregiverLinkCode}
+            onChangeText={setCaregiverLinkCode}
+            autoCapitalize="none"
+            autoCorrect={false}
             returnKeyType="done"
-            onSubmitEditing={handleContinue}
+            onSubmitEditing={() => canContinue && handleFinish()}
           />
 
           <TouchableOpacity
-            style={[styles.btn, !canContinue && styles.btnDisabled]}
-            onPress={handleContinue}
-            disabled={!canContinue}
+            style={[styles.btn, (!canContinue || saving) && styles.btnDisabled]}
+            onPress={handleFinish}
+            disabled={!canContinue || saving}
             activeOpacity={0.85}
           >
-            <Text style={styles.btnText}>Continue</Text>
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnText}>Finish & Connect</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -102,13 +113,14 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   top: {
-    gap: 8,
+    gap: 10,
   },
   title: {
     fontFamily: 'Georgia',
     fontSize: 26,
     fontWeight: '700',
     color: Brand.text,
+    marginTop: 4,
   },
   subtitle: {
     fontSize: 15,

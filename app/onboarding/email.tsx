@@ -19,6 +19,9 @@ import { useOnboarding } from '@/context/OnboardingContext';
 export default function EmailScreen() {
   const { data, setEmail } = useOnboarding();
   const canContinue = data.email.trim().length > 0;
+  const isGuardian = data.role === 'New Guardian';
+  const total = isGuardian ? 5 : 6;
+  const current = isGuardian ? 3 : 4;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -26,7 +29,7 @@ export default function EmailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Brand.text} />
         </TouchableOpacity>
-        <ProgressDots total={6} current={4} />
+        <ProgressDots total={total} current={current} />
         <View style={styles.backBtn} />
       </View>
 
