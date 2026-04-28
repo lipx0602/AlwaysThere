@@ -3,18 +3,24 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { Brand } from '@/constants/theme';
+import { Brand, Guardian } from '@/constants/theme';
+import { useOnboarding } from '@/context/OnboardingContext';
 
 export default function TabLayout() {
+  const { data } = useOnboarding();
+  const isGuardian = data.role === 'New Guardian';
+  const accent = isGuardian ? Guardian.primary : Brand.primary;
+  const borderColor = isGuardian ? Guardian.border : Brand.border;
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Brand.primary,
+        tabBarActiveTintColor: accent,
         tabBarInactiveTintColor: '#9CA3AF',
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          borderTopColor: Brand.border,
+          borderTopColor: borderColor,
           backgroundColor: Brand.surface,
         },
       }}
@@ -22,9 +28,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: isGuardian ? 'Loved Ones' : 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Ionicons name={isGuardian ? 'people' : 'home'} size={size} color={color} />
           ),
         }}
       />

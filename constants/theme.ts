@@ -40,6 +40,17 @@ export const Brand = {
   error: '#EF4444',
 };
 
+export const Guardian = {
+  primary: '#5E8B73',
+  primaryLight: '#D4EAE0',
+  primaryDark: '#3D6B55',
+  surface: '#FFFFFF',
+  surfaceAlt: '#F4F9F7',
+  border: '#C8DED7',
+  text: '#111827',
+  textMuted: '#6B7280',
+};
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

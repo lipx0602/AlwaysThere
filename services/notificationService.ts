@@ -63,6 +63,30 @@ export async function scheduleRuleNotifications(rule: NotificationRule): Promise
   }
 }
 
+export async function scheduleGuardianNotifications(rule: NotificationRule): Promise<void> {
+  for (const step of rule.guardianSteps) {
+    const content: Notifications.NotificationContentInput = {
+      title: step.title,
+      body: step.body,
+      sound: true,
+      data: step.deepLink ? { deepLink: step.deepLink, ruleId: rule.id } : { ruleId: rule.id },
+    };
+
+    if (step.delaySeconds === 0) {
+      await Notifications.scheduleNotificationAsync({ content, trigger: null });
+    } else {
+      await Notifications.scheduleNotificationAsync({
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: step.delaySeconds,
+          repeats: false,
+        },
+      });
+    }
+  }
+}
+
 export async function scheduleEmergencyNotification(): Promise<void> {
   await Notifications.scheduleNotificationAsync({
     content: {

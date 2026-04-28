@@ -13,9 +13,14 @@ import {
 import { LineChart } from 'react-native-chart-kit';
 
 import { NOTIFICATION_RULES } from '@/constants/notificationRules';
-import { Brand } from '@/constants/theme';
+import { Brand, Guardian } from '@/constants/theme';
 import { DUMMY_ALERTS, VITALS_LAST_7_DAYS } from '@/constants/vitals';
-import { evaluateRules, scheduleRuleNotifications } from '@/services/notificationService';
+import { useOnboarding } from '@/context/OnboardingContext';
+import {
+  evaluateRules,
+  scheduleGuardianNotifications,
+  scheduleRuleNotifications,
+} from '@/services/notificationService';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_OUTER_WIDTH = SCREEN_WIDTH - 32; // card horizontal padding
@@ -75,7 +80,295 @@ const DEMO_HIGH_VITALS = {
   diastolic: 92,
 };
 
-export default function HomeScreen() {
+// ─── Guardian / Family Caregiver Home ───────────────────────────────────────
+
+const GUARDIAN_TIMELINE = [
+  { icon: '🩸', message: 'Blood pressure reading sent to you', time: '2:34 PM', level: 'warning' },
+  { icon: '💓', message: 'Heart rate returned to normal range', time: '2:50 PM', level: 'ok' },
+  { icon: '😴', message: 'Rest period detected — no readings', time: '3:30 PM', level: 'ok' },
+  { icon: '✅', message: 'Evening check-in completed', time: '6:00 PM', level: 'ok' },
+];
+
+function CaregiverHome() {
+  const [simulating, setSimulating] = useState(false);
+  const [simulated, setSimulated] = useState(false);
+
+  const handleSimulate = async () => {
+    setSimulating(true);
+    try {
+      const matched = evaluateRules(DEMO_HIGH_VITALS, NOTIFICATION_RULES);
+      for (const rule of matched) {
+        await scheduleGuardianNotifications(rule);
+      }
+      setSimulated(true);
+    } finally {
+      setSimulating(false);
+    }
+  };
+
+  const latestVitals = VITALS_LAST_7_DAYS[6];
+  const bpHigh = latestVitals.systolic >= 140;
+  const statusOk = !bpHigh;
+
+  return (
+    <SafeAreaView style={gStyles.safe}>
+      <ScrollView
+        style={gStyles.scroll}
+        contentContainerStyle={gStyles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={gStyles.headerRow}>
+          <View>
+            <Text style={gStyles.greeting}>Checking in on</Text>
+            <Text style={gStyles.appName}>Your Loved One</Text>
+          </View>
+          <View style={gStyles.shieldBadge}>
+            <Ionicons name="people" size={22} color={Guardian.primary} />
+          </View>
+        </View>
+
+        {/* Wellbeing status banner */}
+        <View style={[gStyles.statusBanner, statusOk ? gStyles.statusBannerOk : gStyles.statusBannerWarn]}>
+          <Ionicons
+            name={statusOk ? 'checkmark-circle' : 'alert-circle'}
+            size={22}
+            color={statusOk ? Guardian.primary : '#D97706'}
+          />
+          <View style={gStyles.statusText}>
+            <Text style={[gStyles.statusTitle, !statusOk && gStyles.statusTitleWarn]}>
+              {statusOk ? 'Doing well today' : 'Needs your attention'}
+            </Text>
+            <Text style={gStyles.statusSub}>
+              {statusOk
+                ? 'All readings are within a comfortable range.'
+                : 'Blood pressure was elevated earlier. Consider calling to check in.'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Alert simulation card */}
+        <View style={gStyles.card}>
+          <View style={gStyles.cardHeader}>
+            <Ionicons name="notifications" size={18} color={Guardian.primary} />
+            <Text style={gStyles.cardTitle}>Your Alerts</Text>
+          </View>
+          <Text style={gStyles.cardSub}>Notifications you receive when something needs attention</Text>
+          <View style={gStyles.divider} />
+
+          {simulated ? (
+            <View style={gStyles.demoTip}>
+              <Ionicons name="information-circle" size={18} color={Guardian.primary} style={{ marginTop: 1 }} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <Text style={gStyles.demoTipText}>
+                  <Text style={gStyles.demoTipBold}>This is a demo. </Text>
+                  Exit the app — you'll receive a family alert shortly, then a follow-up 40 seconds later.
+                </Text>
+                <TouchableOpacity onPress={() => setSimulated(false)} activeOpacity={0.7}>
+                  <Text style={gStyles.demoTipRetry}>Simulate again</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[gStyles.simulateBtn, simulating && gStyles.simulateBtnDisabled]}
+              onPress={handleSimulate}
+              disabled={simulating}
+              activeOpacity={0.8}
+            >
+              {simulating ? (
+                <ActivityIndicator size="small" color={Guardian.primary} />
+              ) : (
+                <>
+                  <Ionicons name="notifications-outline" size={15} color={Guardian.primary} />
+                  <Text style={gStyles.simulateBtnText}>Simulate family alert</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Activity timeline */}
+        <View style={gStyles.card}>
+          <View style={gStyles.cardHeader}>
+            <Ionicons name="time" size={18} color={Guardian.primary} />
+            <Text style={gStyles.cardTitle}>Yesterday's Activity</Text>
+          </View>
+          <View style={gStyles.divider} />
+          {GUARDIAN_TIMELINE.map((item, i) => (
+            <View
+              key={i}
+              style={[gStyles.timelineRow, i < GUARDIAN_TIMELINE.length - 1 && gStyles.timelineRowBorder]}
+            >
+              <Text style={gStyles.timelineIcon}>{item.icon}</Text>
+              <View style={gStyles.timelineContent}>
+                <Text style={gStyles.timelineMsg}>{item.message}</Text>
+                <Text style={gStyles.timelineTime}>{item.time}</Text>
+              </View>
+              <View style={[gStyles.dot, item.level === 'ok' ? gStyles.dotOk : gStyles.dotWarn]} />
+            </View>
+          ))}
+        </View>
+
+        {/* Gentle vitals snapshot */}
+        <View style={gStyles.card}>
+          <View style={gStyles.cardHeader}>
+            <Ionicons name="heart" size={18} color={Guardian.primary} />
+            <Text style={gStyles.cardTitle}>Last Known Readings</Text>
+          </View>
+          <Text style={gStyles.cardSub}>From the most recent sync</Text>
+          <View style={gStyles.vitalsGrid}>
+            {[
+              {
+                label: 'Heart Rate',
+                value: `${latestVitals.heartRate} bpm`,
+                icon: '❤️',
+                ok: latestVitals.heartRate >= 60 && latestVitals.heartRate <= 100,
+              },
+              {
+                label: 'Blood Pressure',
+                value: `${latestVitals.systolic}/${latestVitals.diastolic}`,
+                icon: '🩸',
+                ok: latestVitals.systolic < 140,
+              },
+              {
+                label: 'Oxygen',
+                value: `${latestVitals.spo2}%`,
+                icon: '💨',
+                ok: latestVitals.spo2 >= 95,
+              },
+              {
+                label: 'Temperature',
+                value: `${latestVitals.temp}°F`,
+                icon: '🌡️',
+                ok: latestVitals.temp < 100.4,
+              },
+            ].map(v => (
+              <View key={v.label} style={[gStyles.vitalItem, !v.ok && gStyles.vitalItemWarn]}>
+                <Text style={gStyles.vitalIcon}>{v.icon}</Text>
+                <Text style={[gStyles.vitalValue, !v.ok && gStyles.vitalValueWarn]}>{v.value}</Text>
+                <Text style={gStyles.vitalLabel}>{v.label}</Text>
+                <Text style={[gStyles.vitalStatus, v.ok ? gStyles.vitalStatusOk : gStyles.vitalStatusWarn]}>
+                  {v.ok ? 'Normal' : 'Elevated'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const gStyles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: Guardian.surfaceAlt },
+  scroll: { flex: 1 },
+  container: { padding: 16, gap: 16, paddingBottom: 32 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  greeting: { fontSize: 16, color: Guardian.textMuted },
+  appName: { fontFamily: 'Georgia', fontSize: 26, fontWeight: '700', color: Guardian.primary },
+  shieldBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Guardian.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+  },
+  statusBannerOk: { backgroundColor: Guardian.primaryLight, borderColor: Guardian.border },
+  statusBannerWarn: { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' },
+  statusText: { flex: 1, gap: 4 },
+  statusTitle: { fontSize: 16, fontWeight: '700', color: Guardian.primaryDark },
+  statusTitleWarn: { color: '#92400E' },
+  statusSub: { fontSize: 14, color: Guardian.textMuted, lineHeight: 20 },
+  card: {
+    backgroundColor: Guardian.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Guardian.border,
+    gap: 12,
+  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: Guardian.text },
+  cardSub: { fontSize: 13, color: Guardian.textMuted, marginTop: -6 },
+  divider: { height: 1, backgroundColor: Guardian.border },
+  timelineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  timelineRowBorder: { borderBottomWidth: 1, borderBottomColor: Guardian.border },
+  timelineIcon: { fontSize: 20 },
+  timelineContent: { flex: 1, gap: 2 },
+  timelineMsg: { fontSize: 14, color: Guardian.text, fontWeight: '500' },
+  timelineTime: { fontSize: 12, color: Guardian.textMuted },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  dotOk: { backgroundColor: Guardian.primary },
+  dotWarn: { backgroundColor: '#F59E0B' },
+  demoTip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: Guardian.primaryLight,
+    borderRadius: 10,
+    padding: 12,
+  },
+  demoTipText: { fontSize: 13, color: Guardian.primaryDark, lineHeight: 19 },
+  demoTipBold: { fontWeight: '700' },
+  demoTipRetry: { fontSize: 13, fontWeight: '600', color: Guardian.primaryDark, textDecorationLine: 'underline' },
+  simulateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Guardian.primary,
+    borderStyle: 'dashed',
+  },
+  simulateBtnDisabled: { opacity: 0.5 },
+  simulateBtnText: { fontSize: 13, fontWeight: '600', color: Guardian.primary },
+  vitalsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  vitalItem: {
+    flex: 1,
+    minWidth: '40%',
+    backgroundColor: Guardian.surfaceAlt,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    gap: 2,
+    borderWidth: 1,
+    borderColor: Guardian.border,
+  },
+  vitalItemWarn: { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' },
+  vitalIcon: { fontSize: 22 },
+  vitalValue: { fontSize: 17, fontWeight: '700', color: Guardian.text },
+  vitalValueWarn: { color: '#92400E' },
+  vitalLabel: { fontSize: 12, color: Guardian.textMuted, textAlign: 'center' },
+  vitalStatus: { fontSize: 11, fontWeight: '600', marginTop: 2 },
+  vitalStatusOk: { color: Guardian.primary },
+  vitalStatusWarn: { color: '#D97706' },
+});
+
+// ─── Patient Home ─────────────────────────────────────────────────────────────
+
+function PatientHome() {
   const [simulating, setSimulating] = useState(false);
   const [simulated, setSimulated] = useState(false);
 
@@ -447,3 +740,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+// ─── Root export — branches on role ──────────────────────────────────────────
+
+export default function HomeScreen() {
+  const { data } = useOnboarding();
+  return data.role === 'New Guardian' ? <CaregiverHome /> : <PatientHome />;
+}

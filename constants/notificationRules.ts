@@ -20,6 +20,7 @@ export interface NotificationRule {
   conditions: VitalCondition[];
   conditionOperator: 'AND' | 'OR';
   steps: NotificationStep[];
+  guardianSteps: NotificationStep[];
   cooldownMinutes: number;
 }
 
@@ -45,6 +46,19 @@ export const NOTIFICATION_RULES: NotificationRule[] = [
         title: '💛 How are you feeling?',
         body: 'Tap to tell us your blood pressure reading.',
         deepLink: '/alert-response?ruleId=bp_hrv_high',
+      },
+    ],
+    guardianSteps: [
+      {
+        delaySeconds: 20,
+        title: '💛 Your loved one needs attention',
+        body: 'Their blood pressure is elevated. It\'s a good time to check in on them.',
+      },
+      {
+        delaySeconds: 40,
+        title: 'Have you been able to reach them?',
+        body: 'We sent them a check-in prompt. Let us know if they\'re okay.',
+        deepLink: '/alert-response?ruleId=bp_hrv_high&role=guardian',
       },
     ],
   },
